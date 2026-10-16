@@ -150,16 +150,22 @@
             font-weight: 400;
         }
 
-        .review-text-display {
+        /* Auto-expanding editable textarea on the preview sheet */
+        textarea.review-fountain-ink {
             width: 100%;
             min-height: 135px;
+            background: transparent;
+            border: none;
+            outline: none;
             font-family: 'Hind Siliguri', 'Kalam', cursive;
             font-size: 1.12rem;
             line-height: 34px;
             color: #172a38;
-            white-space: pre-wrap;
-            word-break: break-word;
+            resize: none;
+            padding: 0;
             margin-top: -3px;
+            overflow-y: hidden;
+            display: block;
         }
 
         .char-counter {
@@ -213,15 +219,6 @@
             color: rgba(94, 119, 98, 0.45);
             font-size: 0.92rem;
             font-weight: 400;
-        }
-
-        .review-signature-display {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: #172a38;
-            border-bottom: 1.5px dashed rgba(126, 156, 130, 0.6);
-            padding: 2px 6px;
-            text-align: right;
         }
 
         .pseudo-option-row {
@@ -544,12 +541,12 @@
                     <textarea 
                         id="letterBody" 
                         class="fountain-ink" 
-                        maxlength="4000" 
+                        maxlength="5000" 
                         placeholder="যা ইচ্ছা লিখে ফেলো..."
                         spellcheck="false"
                     ></textarea>
                 </div>
-                <div class="char-counter" id="charCounter">0 / 4000</div>
+                <div class="char-counter" id="charCounter">0 / 5000</div>
 
                 <div class="signoff-section">
                     <span class="signoff-intro">ইতি,</span>
@@ -579,7 +576,7 @@
                 </div>
             </div>
 
-            <!-- STEP 2: Review View -->
+            <!-- STEP 2: Review View (Direct in-place editing allowed) -->
             <div id="reviewView" style="display: none;">
                 <div class="letter-header">
                     <div class="letter-date" id="reviewDate">তারিখ: ১২ অক্টোবর, ২০২৬</div>
@@ -587,12 +584,25 @@
                 </div>
 
                 <div class="ruled-paper">
-                    <div class="review-text-display" id="reviewBodyText"></div>
+                    <textarea 
+                        id="reviewBodyText" 
+                        class="review-fountain-ink" 
+                        maxlength="5000" 
+                        spellcheck="false"
+                    ></textarea>
                 </div>
 
                 <div class="signoff-section">
                     <span class="signoff-intro">ইতি,</span>
-                    <div class="review-signature-display" id="reviewSenderText">অচেনা মানুষ</div>
+                    <div class="signature-row">
+                        <input 
+                            type="text" 
+                            id="reviewSenderInput" 
+                            class="signature-input" 
+                            maxlength="36" 
+                            placeholder="তোমার নাম..."
+                        />
+                    </div>
                 </div>
 
                 <div class="letter-footer">
@@ -646,6 +656,9 @@
         const paperCard = document.getElementById('paperCard');
         const foldingStage = document.getElementById('foldingStage');
 
+        const reviewBodyText = document.getElementById('reviewBodyText');
+        const reviewSenderInput = document.getElementById('reviewSenderInput');
+
         function toBengaliDigits(num) {
             const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
             return String(num).replace(/\d/g, d => banglaDigits[d]);
@@ -695,6 +708,31 @@
             writingStatus.textContent = "";
         });
 
+        function adjustReviewHeight() {
+            reviewBodyText.style.height = 'auto';
+            reviewBodyText.style.height = Math.max(135, reviewBodyText.scrollHeight) + 'px';
+        }
+
+        // Live sync when editing directly on the preview sheet
+        reviewBodyText.addEventListener('input', () => {
+            adjustReviewHeight();
+            letterBody.value = reviewBodyText.value;
+            charCounter.textContent = `${letterBody.value.length} / ${letterBody.maxLength}`;
+            reviewStatus.textContent = "";
+        });
+
+        reviewSenderInput.addEventListener('input', () => {
+            senderName.value = reviewSenderInput.value;
+            if (isUnknown && reviewSenderInput.value.trim() !== "অচেনা মানুষ") {
+                isUnknown = false;
+                pseudoChip.classList.remove('active');
+                pseudoChip.textContent = "অচেনা মানুষ";
+                senderName.disabled = false;
+                senderName.style.opacity = "1";
+            }
+            reviewStatus.textContent = "";
+        });
+
         function openReview() {
             const text = letterBody.value.trim();
             const author = senderName.value.trim();
@@ -711,12 +749,14 @@
 
             const finalAuthor = isUnknown ? "অচেনা মানুষ" : author;
 
-            document.getElementById('reviewBodyText').textContent = text;
-            document.getElementById('reviewSenderText').textContent = finalAuthor;
+            reviewBodyText.value = letterBody.value;
+            reviewSenderInput.value = finalAuthor;
 
             document.getElementById('writingView').style.display = "none";
             document.getElementById('reviewView').style.display = "block";
             reviewStatus.textContent = "";
+
+            setTimeout(adjustReviewHeight, 15);
         }
 
         function backToEdit() {
@@ -755,7 +795,7 @@
             return lines;
         }
 
-        // Distributes lines evenly across pages to prevent orphaned lines on the last page
+        // Evenly distributes lines across pages
         function createChirkutPages(lines) {
             const total = lines.length;
 
@@ -838,30 +878,21 @@
                 bodyStartY = 85;
             }
 
-            // Draw body text
-            ctx.fillStyle = '#172a38';
-            ctx.font = '20px "Hind Siliguri", "Kalam", sans-serif';
-            let curY = bodyStartY + 26;
-            for (const line of pageData.lines) {
-                if (line) ctx.fillText(line, padLeft, curY);
-                curY += lineHeight;
-            }
-
-            // Determine dynamic signature coordinates
-            let signY = 750;
-            let authorY = 784;
+            const totalTextLines = pageData.lines.length;
+            const endTextY = bodyStartY + 26 + Math.max(0, totalTextLines - 1) * lineHeight;
             const isFinalPage = (pageData.type === 'single' || pageData.type === 'last');
 
+            let signY = 740;
+            let authorY = 772;
             if (isFinalPage) {
-                // Sits naturally right below text (or clamps cleanly if page is full)
-                signY = Math.min(740, curY + 24);
+                signY = Math.min(740, endTextY + 36);
                 authorY = signY + 32;
             }
 
-            // Draw ruled lines — on the final page, wrap up cleanly below the signature
+            // Ruled lines under text
             ctx.strokeStyle = 'rgba(126, 156, 130, 0.38)';
             ctx.lineWidth = 1.5;
-            const maxRuledY = isFinalPage ? Math.min(780, Math.max(authorY + 24, curY + 60)) : 780;
+            const maxRuledY = isFinalPage ? Math.min(780, Math.max(authorY + 24, endTextY + 50)) : 780;
 
             for (let y = bodyStartY; y <= maxRuledY; y += lineHeight) {
                 ctx.beginPath();
@@ -870,7 +901,6 @@
                 ctx.stroke();
             }
 
-            // Vertical margin
             ctx.strokeStyle = 'rgba(126, 156, 130, 0.65)';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -878,7 +908,15 @@
             ctx.lineTo(padLeft - 14, maxRuledY + 4);
             ctx.stroke();
 
-            // Render signature directly underneath
+            // Text on top of ruled lines
+            ctx.fillStyle = '#172a38';
+            ctx.font = '20px "Hind Siliguri", "Kalam", sans-serif';
+            let curY = bodyStartY + 26;
+            for (const line of pageData.lines) {
+                if (line) ctx.fillText(line, padLeft, curY);
+                curY += lineHeight;
+            }
+
             if (isFinalPage) {
                 ctx.textAlign = 'right';
                 ctx.fillStyle = '#2d4232';
@@ -890,7 +928,6 @@
                 ctx.fillText(authorText, width - padRight, authorY);
             }
 
-            // Bottom page counter badge
             if (pageData.totalPages > 1) {
                 ctx.textAlign = 'center';
                 ctx.fillStyle = '#7a967f';
@@ -901,22 +938,82 @@
             return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         }
 
+        // Splits text into chunks safely under Telegram's 4,096-character limit so text never fails
+        async function sendTelegramTextChunks(text, dateText, author) {
+            const maxChunkLen = 3400;
+            const paragraphs = text.split('\n');
+            const chunks = [];
+            let currentChunk = "";
+
+            for (const p of paragraphs) {
+                if ((currentChunk.length + p.length + 1) > maxChunkLen) {
+                    if (currentChunk.trim()) {
+                        chunks.push(currentChunk.trim());
+                        currentChunk = "";
+                    }
+                    if (p.length > maxChunkLen) {
+                        const words = p.split(' ');
+                        for (const w of words) {
+                            if ((currentChunk.length + w.length + 1) > maxChunkLen) {
+                                chunks.push(currentChunk.trim());
+                                currentChunk = w;
+                            } else {
+                                currentChunk = (currentChunk ? currentChunk + ' ' + w : w);
+                            }
+                        }
+                    } else {
+                        currentChunk = p;
+                    }
+                } else {
+                    currentChunk = currentChunk ? currentChunk + '\n' + p : p;
+                }
+            }
+            if (currentChunk.trim()) {
+                chunks.push(currentChunk.trim());
+            }
+
+            const total = chunks.length;
+            for (let i = 0; i < total; i++) {
+                let msg = "";
+                if (total === 1) {
+                    msg = `📜 <b>চিরকুট</b> • <i>${dateText}</i>\n\n<blockquote><b>ফারহান,</b>\n\n${escapeHtml(chunks[0])}\n\n— <b>ইতি, ${escapeHtml(author)}</b></blockquote>`;
+                } else if (i === 0) {
+                    msg = `📜 <b>চিরকুট (পর্ব ১/${toBengaliDigits(total)})</b> • <i>${dateText}</i>\n\n<blockquote><b>ফারহান,</b>\n\n${escapeHtml(chunks[i])}</blockquote>`;
+                } else if (i === total - 1) {
+                    msg = `<blockquote>${escapeHtml(chunks[i])}\n\n— <b>ইতি, ${escapeHtml(author)}</b></blockquote>`;
+                } else {
+                    msg = `<blockquote>${escapeHtml(chunks[i])}</blockquote>`;
+                }
+
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: msg,
+                        parse_mode: "HTML"
+                    })
+                });
+            }
+        }
+
         async function sendChirkut() {
             if (isSending) return;
 
-            const text = letterBody.value.trim();
-            const author = document.getElementById('reviewSenderText').textContent.trim() || "অচেনা মানুষ";
+            // Read directly from the preview sheet in case they edited words there
+            const text = reviewBodyText.value.trim();
+            const author = reviewSenderInput.value.trim() || "অচেনা মানুষ";
             const dateText = document.getElementById('letterDate').textContent;
             const sendBtn = document.getElementById('sendBtn');
+
+            if (!text) {
+                reviewStatus.textContent = "চিরকুটে কিছু তো লিখে জানাও!";
+                return;
+            }
 
             isSending = true;
             reviewStatus.textContent = "";
             sendBtn.classList.add('loading');
-
-            const fullBlockquote = 
-                `<blockquote><b>ফারহান,</b>\n\n` +
-                `${escapeHtml(text)}\n\n` +
-                `— <b>ইতি, ${escapeHtml(author)}</b></blockquote>`;
 
             try {
                 const testCanvas = document.createElement('canvas');
@@ -934,16 +1031,12 @@
 
                 let isSuccess = false;
 
+                // 1. Send Chirkut Image / Swipable Album
                 if (pageBlobs.length === 1) {
-                    const isLongCaption = fullBlockquote.length > 900;
-                    const caption = isLongCaption
-                        ? `📜 <b>চিরকুট</b> • <i>${dateText}</i>\n— <b>ইতি, ${escapeHtml(author)}</b>`
-                        : `📜 <b>চিরকুট</b> • <i>${dateText}</i>\n\n${fullBlockquote}`;
-
                     const formData = new FormData();
                     formData.append('chat_id', CHAT_ID);
                     formData.append('photo', pageBlobs[0], 'chirkut.png');
-                    formData.append('caption', caption);
+                    formData.append('caption', `📜 <b>চিরকুট</b> • <i>${dateText}</i>\n— <b>ইতি, ${escapeHtml(author)}</b>`);
                     formData.append('parse_mode', 'HTML');
 
                     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
@@ -987,7 +1080,10 @@
                     isSuccess = true;
                 }
 
+                // 2. Deliver the full readable text immediately after the image/album
                 if (isSuccess) {
+                    await sendTelegramTextChunks(text, dateText, author);
+
                     paperCard.style.display = "none";
                     foldingStage.style.display = "block";
 
@@ -1015,6 +1111,8 @@
         function resetLetter() {
             letterBody.value = "";
             senderName.value = "";
+            reviewBodyText.value = "";
+            reviewSenderInput.value = "";
             senderName.disabled = false;
             senderName.style.opacity = "1";
             isUnknown = false;
