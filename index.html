@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#38463a">
+    <title>একটি চিরকুট</title>
+   
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Kalam:wght@400;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+        }
+
+        body {
+            background-color: #38463a;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 22px 22px;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 4px;
+            font-family: 'Hind Siliguri', 'Kalam', cursive, sans-serif;
+            color: #213024;
+            overflow-x: hidden;
+            perspective: 1400px;
+        }
+
+        input, textarea {
+            -webkit-touch-callout: default !important;
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+        }
+
+        .desk-container {
+            width: 100%;
+            max-width: 410px;
+            position: relative;
+            perspective: 1400px;
+            margin: 0 auto;
+        }
+
+        .chirkut-card {
+            position: relative;
+            background-color: #fbf8ef;
+            border-radius: 4px 12px 12px 4px;
+            padding: 26px 18px 18px 22px;
+            box-shadow: 
+                -4px 0 0 #7e9c82,
+                0 18px 32px rgba(0, 0, 0, 0.32),
+                0 4px 8px rgba(0, 0, 0, 0.12),
+                inset 10px 0 20px rgba(0, 0, 0, 0.025);
+            border-left: 9px solid #7e9c82;
+            transform: rotate(-0.4deg);
+            transition: opacity 0.3s ease;
+        }
+
+        .chirkut-card::before {
+            content: "";
+            position: absolute;
+            left: -8px;
+            top: 22px;
+            bottom: 22px;
+            width: 6px;
+            background-image: radial-gradient(circle, #38463a 42%, transparent 45%);
+            background-size: 6px 22px;
+            z-index: 5;
+        }
+
+        .washi-tape {
+            position: absolute;
+            top: -11px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-0.8deg);
+            width: 84px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(2px);
+            border-left: 2px dashed rgba(126, 156, 130, 0.5);
+            border-right: 2px dashed rgba(126, 156, 130, 0.5);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .letter-header {
+            margin-bottom: 6px;
+        }
+
+        .letter-date {
+            font-size: 0.82rem;
+            color: #5e7762;
+            font-weight: 600;
+        }
+
+        .salutation {
+            font-size: 1.42rem;
+            font-weight: 700;
+            color: #233727;
+            margin-top: 2px;
+            letter-spacing: 0.2px;
+        }
+
+        .ruled-paper {
+            position: relative;
+            background-image: repeating-linear-gradient(
+                to bottom,
+                transparent 0px,
+                transparent 32px,
+                rgba(126, 156, 130, 0.35) 32px,
+                rgba(126, 156, 130, 0.35) 34px
+            );
+            background-position: 0 4px;
+            border-left: 2px solid rgba(126, 156, 130, 0.65);
+            padding-left: 10px;
+            margin-top: 6px;
+        }
+
+        textarea.fountain-ink {
+            width: 100%;
+            height: 135px;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: 'Hind Siliguri', 'Kalam', cursive;
+            font-size: 1.12rem;
+            line-height: 34px;
+            color: #172a38;
+            resize: none;
+            padding: 0;
+            margin-top: -3px;
+        }
+
+        textarea.fountain-ink::placeholder {
+            color: rgba(94, 119, 98, 0.5);
+            font-weight: 400;
+        }
+
+        .review-text-display {
+            width: 100%;
+            min-height: 135px;
+            font-family: 'Hind Siliguri', 'Kalam', cursive;
+            font-size: 1.12rem;
+            line-height: 34px;
+            color: #172a38;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-top: -3px;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 0.72rem;
+            color: #7b947e;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .signoff-section {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .signoff-intro {
+            font-size: 1.1rem;
+            color: #2d4232;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .signature-row {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        .signature-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1.5px dashed #7e9c82;
+            font-family: 'Hind Siliguri', 'Kalam', cursive;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #172a38;
+            outline: none;
+            padding: 2px 4px;
+            text-align: right;
+            transition: all 0.2s ease;
+        }
+
+        .signature-input::placeholder {
+            color: rgba(94, 119, 98, 0.45);
+            font-size: 0.92rem;
+            font-weight: 400;
+        }
+
+        .review-signature-display {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #172a38;
+            border-bottom: 1.5px dashed rgba(126, 156, 130, 0.6);
+            padding: 2px 6px;
+            text-align: right;
+        }
+
+        .pseudo-option-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .or-label {
+            font-size: 0.85rem;
+            color: #6a8570;
+            font-family: 'Hind Siliguri', cursive;
+            font-weight: 600;
+        }
+
+        .pseudonym-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 12px;
+            font-size: 0.82rem;
+            font-family: 'Hind Siliguri', cursive;
+            font-weight: 600;
+            color: #4b664f;
+            background: rgba(126, 156, 130, 0.16);
+            border: 1px dashed rgba(126, 156, 130, 0.5);
+            border-radius: 99px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pseudonym-chip:hover {
+            background: rgba(126, 156, 130, 0.25);
+        }
+
+        .pseudonym-chip.active {
+            background: #446149;
+            color: #ffffff;
+            border-color: transparent;
+        }
+
+        .letter-footer {
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(126, 156, 130, 0.35);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .primary-action-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 42px;
+            background: #3f5944;
+            color: #fbf8ef;
+            font-family: 'Hind Siliguri', cursive;
+            font-size: 1.08rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.16);
+            white-space: nowrap;
+            transition: all 0.25s ease;
+        }
+
+        .primary-action-btn:hover {
+            background: #324736;
+            transform: translateY(-1px);
+        }
+
+        .review-button-group {
+            display: flex;
+            width: 100%;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-edit-subtle {
+            background: transparent;
+            border: 1.5px dashed rgba(111, 141, 116, 0.65);
+            color: #425b46;
+            height: 42px;
+            padding: 0 14px;
+            border-radius: 999px;
+            font-family: 'Hind Siliguri', cursive;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .btn-edit-subtle:hover {
+            background: rgba(126, 156, 130, 0.18);
+        }
+
+        .primary-action-btn.loading {
+            pointer-events: none;
+            background: #324736;
+        }
+
+        .btn-spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #fbf8ef;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+
+        .primary-action-btn.loading .btn-content {
+            display: none;
+        }
+
+        .primary-action-btn.loading .btn-spinner {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .feedback-message {
+            min-height: 16px;
+            font-size: 0.85rem;
+            text-align: center;
+            color: #8b3c3c;
+            font-weight: 600;
+        }
+
+        .folding-stage {
+            display: none;
+            position: relative;
+            width: 100%;
+            height: 390px;
+            transform-style: preserve-3d;
+            perspective: 1400px;
+            margin: 0 auto;
+        }
+
+        .fold-packet {
+            position: absolute;
+            inset: 0;
+            transform-style: preserve-3d;
+            animation: flySwoosh 0.75s cubic-bezier(0.25, 1, 0.5, 1) 0.92s forwards;
+        }
+
+        .fold-segment {
+            position: absolute;
+            left: 0;
+            right: 0;
+            background-color: #fbf8ef;
+            border-left: 9px solid #7e9c82;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
+        }
+
+        .segment-middle {
+            top: 130px;
+            height: 130px;
+            border-radius: 2px;
+            z-index: 2;
+        }
+
+        .segment-bottom {
+            top: 260px;
+            height: 130px;
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 12px;
+            transform-origin: top center;
+            z-index: 4;
+            animation: foldBottomUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) 0.05s forwards;
+        }
+
+        .segment-top {
+            top: 0;
+            height: 130px;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 12px;
+            transform-origin: bottom center;
+            z-index: 6;
+            animation: foldTopDown 0.45s cubic-bezier(0.4, 0, 0.2, 1) 0.48s forwards;
+        }
+
+        .segment-bottom::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: #f3edd9;
+            border-left: 9px solid #6f8c73;
+            transform: rotateX(180deg);
+            backface-visibility: hidden;
+            box-shadow: inset 0 -6px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .segment-top::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: #ede6d1;
+            border-left: 9px solid #637f67;
+            transform: rotateX(180deg);
+            backface-visibility: hidden;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+        }
+
+        @keyframes foldBottomUp {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(180deg); }
+        }
+
+        @keyframes foldTopDown {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(-180deg); }
+        }
+
+        @keyframes flySwoosh {
+            0% {
+                transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            20% {
+                transform: translate3d(-10px, 15px, 0) rotate(-4deg) scale(0.96);
+                opacity: 1;
+            }
+            100% {
+                transform: translate3d(240px, -850px, 200px) rotateZ(28deg) rotateX(40deg) scale(0.25);
+                opacity: 0;
+            }
+        }
+
+        .envelope-result {
+            display: none;
+            text-align: center;
+            padding: 20px 8px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .wax-seal-badge {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #537559 0%, #37513b 75%, #223425 100%);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+            color: #edf5ef;
+            font-size: 1.7rem;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            transform: rotate(-5deg);
+        }
+
+        .sealed-title {
+            font-size: 1.45rem;
+            color: #213024;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .sealed-desc {
+            font-size: 1rem;
+            color: #556f5a;
+            line-height: 1.45;
+            max-width: 290px;
+            margin: 0 auto 18px;
+        }
+
+        .btn-write-another {
+            background: transparent;
+            border: 1.5px dashed #6f8d74;
+            color: #384e3c;
+            padding: 6px 20px;
+            border-radius: 99px;
+            font-family: 'Hind Siliguri', cursive;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #confettiCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="confettiCanvas"></canvas>
+
+    <div class="desk-container">
+        <div class="chirkut-card" id="paperCard">
+            <div class="washi-tape"></div>
+
+            <div id="writingView">
+                <div class="letter-header">
+                    <div class="letter-date" id="letterDate">তারিখ: ১২ অক্টোবর, ২০২৬</div>
+                    <div class="salutation">ফারহান,</div>
+                </div>
+
+                <div class="ruled-paper">
+                    <textarea 
+                        id="letterBody" 
+                        class="fountain-ink" 
+                        maxlength="3250" 
+                        placeholder="যা ইচ্ছা লিখে ফেলো..."
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+                <div class="char-counter" id="charCounter">0 / 3250</div>
+
+                <div class="signoff-section">
+                    <span class="signoff-intro">ইতি,</span>
+                    <div class="signature-row">
+                        <input 
+                            type="text" 
+                            id="senderName" 
+                            class="signature-input" 
+                            maxlength="36" 
+                            placeholder="তোমার নাম..."
+                        />
+                    </div>
+                    
+                    <div class="pseudo-option-row">
+                        <span class="or-label">অথবা</span>
+                        <button type="button" class="pseudonym-chip" id="pseudoChip" onclick="toggleAnonymous()">
+                            অচেনা মানুষ
+                        </button>
+                    </div>
+                </div>
+
+                <div class="letter-footer">
+                    <button type="button" class="primary-action-btn" onclick="openReview()">
+                        <span class="btn-content">এক নজর দেখে নাও ➔</span>
+                    </button>
+                    <div class="feedback-message" id="writingStatus"></div>
+                </div>
+            </div>
+
+            <div id="reviewView" style="display: none;">
+                <div class="letter-header">
+                    <div class="letter-date" id="reviewDate">তারিখ: ১২ অক্টোবর, ২০২৬</div>
+                    <div class="salutation">ফারহান,</div>
+                </div>
+
+                <div class="ruled-paper">
+                    <div class="review-text-display" id="reviewBodyText"></div>
+                </div>
+
+                <div class="signoff-section">
+                    <span class="signoff-intro">ইতি,</span>
+                    <div class="review-signature-display" id="reviewSenderText">অচেনা মানুষ</div>
+                </div>
+
+                <div class="letter-footer">
+                    <div class="review-button-group">
+                        <button type="button" class="btn-edit-subtle" onclick="backToEdit()">
+                            পরিবর্তন করো
+                        </button>
+                        <button type="button" class="primary-action-btn" id="sendBtn" onclick="sendChirkut()">
+                            <span class="btn-content">খামে ভরে পাঠাও</span>
+                            <span class="btn-spinner"></span>
+                        </button>
+                    </div>
+                    <div class="feedback-message" id="reviewStatus"></div>
+                </div>
+            </div>
+
+            <div class="envelope-result" id="deliveredView">
+                <div class="wax-seal-badge">✉</div>
+                <h2 class="sealed-title">চিরকুটটি পৌঁছে গেছে</h2>
+                <p class="sealed-desc">তোমার লেখা প্রতিটি শব্দ খামে ভরে ফারহানের কাছে পৌঁছে দেওয়া হয়েছে।</p>
+                <button type="button" class="btn-write-another" onclick="resetLetter()">
+                    আরেকটি চিরকুট লেখো ↺
+                </button>
+            </div>
+        </div>
+
+        <div class="folding-stage" id="foldingStage">
+            <div class="fold-packet">
+                <div class="fold-segment segment-top"></div>
+                <div class="fold-segment segment-middle"></div>
+                <div class="fold-segment segment-bottom"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BOT_TOKEN = "8863248583:AAHCYl5fyisOCgAYwnn163obZMlIleCXSXU";
+        const CHAT_ID = "5726013064";
+
+        let isUnknown = false;
+        let isSending = false;
+
+        const letterBody = document.getElementById('letterBody');
+        const senderName = document.getElementById('senderName');
+        const charCounter = document.getElementById('charCounter');
+        const pseudoChip = document.getElementById('pseudoChip');
+        const writingStatus = document.getElementById('writingStatus');
+        const reviewStatus = document.getElementById('reviewStatus');
+        const paperCard = document.getElementById('paperCard');
+        const foldingStage = document.getElementById('foldingStage');
+
+        function toBengaliDigits(num) {
+            const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+            return String(num).replace(/\d/g, d => banglaDigits[d]);
+        }
+
+        (function setHeaderDate() {
+            const now = new Date();
+            const months = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+            const d = toBengaliDigits(now.getDate());
+            const m = months[now.getMonth()];
+            const y = toBengaliDigits(now.getFullYear());
+            const formattedDate = `তারিখ: ${d} ${m}, ${y}`;
+            
+            document.getElementById('letterDate').textContent = formattedDate;
+            document.getElementById('reviewDate').textContent = formattedDate;
+        })();
+
+        letterBody.addEventListener('input', () => {
+            charCounter.textContent = `${letterBody.value.length} / ${letterBody.maxLength}`;
+            writingStatus.textContent = "";
+        });
+
+        function toggleAnonymous() {
+            isUnknown = !isUnknown;
+            if (isUnknown) {
+                pseudoChip.classList.add('active');
+                pseudoChip.textContent = "✓ অচেনা মানুষ";
+                senderName.value = "অচেনা মানুষ";
+                senderName.disabled = true;
+                senderName.style.opacity = "0.75";
+                writingStatus.textContent = "";
+            } else {
+                pseudoChip.classList.remove('active');
+                pseudoChip.textContent = "অচেনা মানুষ";
+                senderName.value = "";
+                senderName.disabled = false;
+                senderName.style.opacity = "1";
+            }
+        }
+
+        senderName.addEventListener('input', () => {
+            if (isUnknown) {
+                isUnknown = false;
+                pseudoChip.classList.remove('active');
+                pseudoChip.textContent = "অচেনা মানুষ";
+            }
+            writingStatus.textContent = "";
+        });
+
+        function openReview() {
+            const text = letterBody.value.trim();
+            const author = senderName.value.trim();
+
+            if (!text) {
+                writingStatus.textContent = "চিরকুটে কিছু তো লিখে জানাও!";
+                return;
+            }
+
+            if (!author && !isUnknown) {
+                writingStatus.textContent = "তোমার নাম লেখো অথবা 'অচেনা মানুষ' বেছে নাও!";
+                return;
+            }
+
+            const finalAuthor = isUnknown ? "অচেনা মানুষ" : author;
+
+            document.getElementById('reviewBodyText').textContent = text;
+            document.getElementById('reviewSenderText').textContent = finalAuthor;
+
+            document.getElementById('writingView').style.display = "none";
+            document.getElementById('reviewView').style.display = "block";
+            reviewStatus.textContent = "";
+        }
+
+        function backToEdit() {
+            document.getElementById('reviewView').style.display = "none";
+            document.getElementById('writingView').style.display = "block";
+        }
+
+        async function sendChirkut() {
+            if (isSending) return;
+
+            const text = letterBody.value.trim();
+            const author = document.getElementById('reviewSenderText').textContent.trim() || "অচেনা মানুষ";
+            const sendBtn = document.getElementById('sendBtn');
+
+            isSending = true;
+            reviewStatus.textContent = "";
+            sendBtn.classList.add('loading');
+
+            const payloadMessage = 
+                "💌 *একটি নতুন চিরকুট এসেছে!*\n\n" +
+                "🖋️ *প্রেরক:* " + author + "\n" +
+                "🕒 *সময়:* " + new Date().toLocaleString() + "\n\n" +
+                "📜 *চিরকুটের কথা:*\n\n" +
+                "\"" + text + "\"";
+
+            try {
+                const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        chat_id: CHAT_ID,
+                        text: payloadMessage,
+                        parse_mode: "Markdown"
+                    })
+                });
+
+                if (response.ok) {
+                    paperCard.style.display = "none";
+                    foldingStage.style.display = "block";
+
+                    setTimeout(() => {
+                        foldingStage.style.display = "none";
+                        document.getElementById('reviewView').style.display = "none";
+                        document.getElementById('deliveredView').style.display = "block";
+                        paperCard.style.display = "block";
+                        
+                        triggerConfetti();
+                    }, 1650);
+
+                } else {
+                    reviewStatus.textContent = "চিঠি পাঠানো যায়নি। বট-এ /start দেওয়া আছে কি?";
+                    sendBtn.classList.remove('loading');
+                    isSending = false;
+                }
+            } catch (err) {
+                reviewStatus.textContent = "সংযোগ পাওয়া যায়নি। আবার চেষ্টা করুন।";
+                sendBtn.classList.remove('loading');
+                isSending = false;
+            }
+        }
+
+        function resetLetter() {
+            letterBody.value = "";
+            senderName.value = "";
+            senderName.disabled = false;
+            senderName.style.opacity = "1";
+            isUnknown = false;
+            pseudoChip.classList.remove('active');
+            pseudoChip.textContent = "অচেনা মানুষ";
+            charCounter.textContent = "0 / " + letterBody.maxLength;
+            writingStatus.textContent = "";
+            reviewStatus.textContent = "";
+
+            document.getElementById('deliveredView').style.display = "none";
+            document.getElementById('writingView').style.display = "block";
+            isSending = false;
+            document.getElementById('sendBtn').classList.remove('loading');
+        }
+
+        function triggerConfetti() {
+            const canvas = document.getElementById('confettiCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const particles = [];
+            const palette = ['#7e9c82', '#3f5944', '#fbf8ef', '#c2d6c5'];
+
+            for (let i = 0; i < 40; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height * 0.55,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 1.2) * 10,
+                    size: Math.random() * 6 + 3,
+                    color: palette[Math.floor(Math.random() * palette.length)],
+                    alpha: 1
+                });
+            }
+
+            function frame() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let alive = false;
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.28;
+                    p.alpha -= 0.018;
+                    if (p.alpha > 0) {
+                        alive = true;
+                        ctx.globalAlpha = p.alpha;
+                        ctx.fillStyle = p.color;
+                        ctx.fillRect(p.x, p.y, p.size, p.size);
+                    }
+                });
+                if (alive) requestAnimationFrame(frame);
+                else ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            frame();
+        }
+    </script>
+</body>
+</html>
