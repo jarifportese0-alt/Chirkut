@@ -727,19 +727,9 @@
                 .replace(/>/g, "&gt;");
         }
 
-        function generateChirkutCanvas(dateText, bodyText, authorText) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            const width = 640;
-            const padLeft = 68;
-            const padRight = 40;
-            const contentWidth = width - padLeft - padRight;
-            const lineHeight = 36;
-            
-            ctx.font = '22px "Hind Siliguri", "Kalam", sans-serif';
-            
-            const paragraphs = bodyText.split('\n');
+        // Wrap words across lines based on paper width
+        function breakIntoWrappedLines(ctx, text, maxLineWidth) {
+            const paragraphs = text.split('\n');
             const lines = [];
             for (const p of paragraphs) {
                 if (!p.trim()) {
@@ -747,86 +737,176 @@
                     continue;
                 }
                 const words = p.split(' ');
-                let currentLine = '';
+                let current = '';
                 for (const w of words) {
-                    const testLine = currentLine ? currentLine + ' ' + w : w;
-                    if (ctx.measureText(testLine).width > contentWidth) {
-                        lines.push(currentLine);
-                        currentLine = w;
+                    const test = current ? current + ' ' + w : w;
+                    if (ctx.measureText(test).width > maxLineWidth) {
+                        lines.push(current);
+                        current = w;
                     } else {
-                        currentLine = testLine;
+                        current = test;
                     }
                 }
-                if (currentLine) lines.push(currentLine);
+                if (current) lines.push(current);
             }
+            return lines;
+        }
+
+        // Draw an authentic stationery page
+        function drawSinglePageCanvas(pageData, dateText, authorText) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
             
-            const headerHeight = 115;
-            const bodyHeight = Math.max(160, lines.length * lineHeight + 20);
-            const footerHeight = 110;
-            const height = headerHeight + bodyHeight + footerHeight;
+            const width = 640;
+            const height = 820;
+            const padLeft = 68;
+            const padRight = 40;
+            const lineHeight = 36;
             
             canvas.width = width;
             canvas.height = height;
-            
+
+            // Parchment paper
             ctx.fillStyle = '#fbf8ef';
             ctx.fillRect(0, 0, width, height);
-            
+
+            // Left binder edge
             ctx.fillStyle = '#7e9c82';
             ctx.fillRect(0, 0, 16, height);
-            
+
+            // Perforations
             ctx.fillStyle = '#38463a';
             for (let y = 28; y < height - 15; y += 30) {
                 ctx.beginPath();
                 ctx.arc(8, y, 4, 0, Math.PI * 2);
                 ctx.fill();
             }
-            
+
+            // Top Washi Tape
             ctx.fillStyle = 'rgba(240, 234, 218, 0.85)';
             ctx.fillRect((width - 130) / 2, 0, 130, 24);
-            
+
+            let bodyStartY = 110;
+
+            if (pageData.type === 'single' || pageData.type === 'first') {
+                // Header Date
+                ctx.fillStyle = '#5e7762';
+                ctx.font = '600 17px "Hind Siliguri", sans-serif';
+                ctx.fillText(dateText, padLeft, 55);
+
+                // Salutation
+                ctx.fillStyle = '#233727';
+                ctx.font = '700 28px "Hind Siliguri", sans-serif';
+                ctx.fillText('ফারহান,', padLeft, 95);
+
+                bodyStartY = 115;
+            } else {
+                // Continuation small header on later pages
+                ctx.fillStyle = '#738e77';
+                ctx.font = '600 15px "Hind Siliguri", sans-serif';
+                ctx.fillText(`ফারহানকে লেখা চিরকুট • (পাতা ${toBengaliDigits(pageData.pageNum)})`, padLeft, 55);
+                bodyStartY = 85;
+            }
+
+            // Ruled Lines
             ctx.strokeStyle = 'rgba(126, 156, 130, 0.38)';
             ctx.lineWidth = 1.5;
-            for (let y = headerHeight; y < headerHeight + bodyHeight; y += lineHeight) {
+            const maxRuledY = (pageData.type === 'single' || pageData.type === 'last') ? 680 : 740;
+            for (let y = bodyStartY; y <= maxRuledY; y += lineHeight) {
                 ctx.beginPath();
                 ctx.moveTo(padLeft - 10, y + 4);
                 ctx.lineTo(width - padRight, y + 4);
                 ctx.stroke();
             }
-            
+
+            // Left vertical margin
             ctx.strokeStyle = 'rgba(126, 156, 130, 0.65)';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(padLeft - 14, headerHeight - 15);
-            ctx.lineTo(padLeft - 14, headerHeight + bodyHeight);
+            ctx.moveTo(padLeft - 14, bodyStartY - 10);
+            ctx.lineTo(padLeft - 14, maxRuledY + 8);
             ctx.stroke();
-            
-            ctx.fillStyle = '#5e7762';
-            ctx.font = '600 17px "Hind Siliguri", sans-serif';
-            ctx.fillText(dateText, padLeft, 55);
-            
-            ctx.fillStyle = '#233727';
-            ctx.font = '700 28px "Hind Siliguri", sans-serif';
-            ctx.fillText('ফারহান,', padLeft, 95);
-            
+
+            // Body text
             ctx.fillStyle = '#172a38';
             ctx.font = '22px "Hind Siliguri", "Kalam", sans-serif';
-            let curY = headerHeight + 28;
-            for (const line of lines) {
+            let curY = bodyStartY + 28;
+            for (const line of pageData.lines) {
                 if (line) ctx.fillText(line, padLeft, curY);
                 curY += lineHeight;
             }
-            
-            const signY = headerHeight + bodyHeight + 35;
-            ctx.fillStyle = '#2d4232';
-            ctx.font = '600 22px "Hind Siliguri", sans-serif';
-            ctx.textAlign = 'right';
-            ctx.fillText('ইতি,', width - padRight, signY);
-            
-            ctx.fillStyle = '#172a38';
-            ctx.font = '700 25px "Hind Siliguri", sans-serif';
-            ctx.fillText(authorText, width - padRight, signY + 34);
-            
+
+            // Sign-off on the final page
+            if (pageData.type === 'single' || pageData.type === 'last') {
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#2d4232';
+                ctx.font = '600 22px "Hind Siliguri", sans-serif';
+                ctx.fillText('ইতি,', width - padRight, 715);
+
+                ctx.fillStyle = '#172a38';
+                ctx.font = '700 25px "Hind Siliguri", sans-serif';
+                ctx.fillText(authorText, width - padRight, 750);
+            }
+
+            // Bottom page counter badge (if multi-page)
+            if (pageData.totalPages > 1) {
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#7a967f';
+                ctx.font = '600 14px "Hind Siliguri", sans-serif';
+                ctx.fillText(`— পৃষ্ঠা ${toBengaliDigits(pageData.pageNum)} / ${toBengaliDigits(pageData.totalPages)} —`, width / 2, 790);
+            }
+
             return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        // Paginate letter lines across sheets
+        function createChirkutPages(lines) {
+            const pages = [];
+            const totalLines = lines.length;
+
+            // If it fits on 1 sheet (~14 lines or less)
+            if (totalLines <= 14) {
+                pages.push({
+                    type: 'single',
+                    lines: lines,
+                    pageNum: 1,
+                    totalPages: 1
+                });
+                return pages;
+            }
+
+            // Page 1 gets up to 14 lines
+            pages.push({
+                type: 'first',
+                lines: lines.slice(0, 14),
+                pageNum: 1
+            });
+            let idx = 14;
+
+            while (idx < totalLines) {
+                const remaining = totalLines - idx;
+                // Last page needs space for signoff (max 13 lines)
+                if (remaining <= 13) {
+                    pages.push({
+                        type: 'last',
+                        lines: lines.slice(idx, idx + remaining),
+                        pageNum: pages.length + 1
+                    });
+                    idx += remaining;
+                } else {
+                    // Middle page takes up to 17 lines
+                    const take = Math.min(17, remaining - 1);
+                    pages.push({
+                        type: 'middle',
+                        lines: lines.slice(idx, idx + take),
+                        pageNum: pages.length + 1
+                    });
+                    idx += take;
+                }
+            }
+
+            pages.forEach(p => p.totalPages = pages.length);
+            return pages;
         }
 
         async function sendChirkut() {
@@ -841,38 +921,93 @@
             reviewStatus.textContent = "";
             sendBtn.classList.add('loading');
 
-            const letterCaption = 
-                `📜 <b>চিরকুট</b> • <i>${dateText}</i>\n\n` +
+            const fullBlockquote = 
                 `<blockquote><b>ফারহান,</b>\n\n` +
                 `${escapeHtml(text)}\n\n` +
                 `— <b>ইতি, ${escapeHtml(author)}</b></blockquote>`;
 
             try {
-                const imageBlob = await generateChirkutCanvas(dateText, text, author);
-                const formData = new FormData();
-                formData.append('chat_id', CHAT_ID);
-                formData.append('photo', imageBlob, 'chirkut.png');
-                formData.append('caption', letterCaption);
-                formData.append('parse_mode', 'HTML');
+                // 1. Measure text & paginate
+                const testCanvas = document.createElement('canvas');
+                const testCtx = testCanvas.getContext('2d');
+                testCtx.font = '22px "Hind Siliguri", "Kalam", sans-serif';
+                const wrappedLines = breakIntoWrappedLines(testCtx, text, 640 - 68 - 40);
+                const pageSpecs = createChirkutPages(wrappedLines);
 
-                let response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                    method: "POST",
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            chat_id: CHAT_ID,
-                            text: letterCaption,
-                            parse_mode: "HTML"
-                        })
-                    });
+                // 2. Render all page blobs
+                const pageBlobs = [];
+                for (const spec of pageSpecs) {
+                    const b = await drawSinglePageCanvas(spec, dateText, author);
+                    pageBlobs.push(b);
                 }
 
-                if (response.ok) {
+                let response;
+
+                // 3. Send either as a single Photo OR a multi-page Album (sendMediaGroup)
+                if (pageBlobs.length === 1) {
+                    const isLongCaption = fullBlockquote.length > 900;
+                    const caption = isLongCaption 
+                        ? `📜 <b>চিরকুট</b> • <i>${dateText}</i>\n— <b>ইতি, ${escapeHtml(author)}</b>`
+                        : `📜 <b>চিরকুট</b> • <i>${dateText}</i>\n\n${fullBlockquote}`;
+
+                    const formData = new FormData();
+                    formData.append('chat_id', CHAT_ID);
+                    formData.append('photo', pageBlobs[0], 'chirkut_1.png');
+                    formData.append('caption', caption);
+                    formData.append('parse_mode', 'HTML');
+
+                    response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (response.ok && isLongCaption) {
+                        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                chat_id: CHAT_ID,
+                                text: fullBlockquote,
+                                parse_mode: "HTML"
+                            })
+                        });
+                    }
+                } else {
+                    // Multi-page Album
+                    const media = pageBlobs.map((_, i) => ({
+                        type: 'photo',
+                        media: `attach://page_${i + 1}`,
+                        caption: (i === 0) ? `📜 <b>চিরকুট (${toBengaliDigits(pageBlobs.length)} পৃষ্ঠা)</b> • <i>${dateText}</i>\n— <b>ইতি, ${escapeHtml(author)}</b>` : undefined,
+                        parse_mode: (i === 0) ? 'HTML' : undefined
+                    }));
+
+                    const formData = new FormData();
+                    formData.append('chat_id', CHAT_ID);
+                    formData.append('media', JSON.stringify(media));
+                    pageBlobs.forEach((blob, i) => {
+                        formData.append(`page_${i + 1}`, blob, `chirkut_page_${i + 1}.png`);
+                    });
+
+                    response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup`, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    // Send copyable text below the album
+                    if (response.ok) {
+                        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                chat_id: CHAT_ID,
+                                text: fullBlockquote,
+                                parse_mode: "HTML"
+                            })
+                        });
+                    }
+                }
+
+                if (response && response.ok) {
                     paperCard.style.display = "none";
                     foldingStage.style.display = "block";
 
@@ -881,14 +1016,37 @@
                         document.getElementById('reviewView').style.display = "none";
                         document.getElementById('deliveredView').style.display = "block";
                         paperCard.style.display = "block";
-                        
                         triggerConfetti();
                     }, 1650);
 
                 } else {
-                    reviewStatus.textContent = "চিঠি পাঠানো যায়নি। বট-এ /start দেওয়া আছে কি?";
-                    sendBtn.classList.remove('loading');
-                    isSending = false;
+                    // Fallback to text if Telegram photo upload fails
+                    const fallbackResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            chat_id: CHAT_ID,
+                            text: `📜 <b>চিরকুট</b> • <i>${dateText}</i>\n\n${fullBlockquote}`,
+                            parse_mode: "HTML"
+                        })
+                    });
+
+                    if (fallbackResponse.ok) {
+                        paperCard.style.display = "none";
+                        foldingStage.style.display = "block";
+
+                        setTimeout(() => {
+                            foldingStage.style.display = "none";
+                            document.getElementById('reviewView').style.display = "none";
+                            document.getElementById('deliveredView').style.display = "block";
+                            paperCard.style.display = "block";
+                            triggerConfetti();
+                        }, 1650);
+                    } else {
+                        reviewStatus.textContent = "চিঠি পাঠানো যায়নি। বট-এ /start দেওয়া আছে কি?";
+                        sendBtn.classList.remove('loading');
+                        isSending = false;
+                    }
                 }
             } catch (err) {
                 reviewStatus.textContent = "সংযোগ পাওয়া যায়নি। আবার চেষ্টা করুন।";
