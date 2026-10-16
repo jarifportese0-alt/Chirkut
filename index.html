@@ -544,12 +544,12 @@
                     <textarea 
                         id="letterBody" 
                         class="fountain-ink" 
-                        maxlength="3250" 
+                        maxlength="4000" 
                         placeholder="যা ইচ্ছা লিখে ফেলো..."
                         spellcheck="false"
                     ></textarea>
                 </div>
-                <div class="char-counter" id="charCounter">0 / 3250</div>
+                <div class="char-counter" id="charCounter">0 / 4000</div>
 
                 <div class="signoff-section">
                     <span class="signoff-intro">ইতি,</span>
@@ -755,36 +755,35 @@
             return lines;
         }
 
+        // Distributes lines evenly across pages to prevent orphaned lines on the last page
         function createChirkutPages(lines) {
-            const pages = [];
-            const totalLines = lines.length;
+            const total = lines.length;
 
-            if (totalLines <= 16) {
-                pages.push({ type: 'single', lines: lines, pageNum: 1, totalPages: 1 });
-                return pages;
+            if (total <= 16) {
+                return [{ type: 'single', lines: lines, pageNum: 1, totalPages: 1 }];
             }
 
-            pages.push({ type: 'first', lines: lines.slice(0, 18), pageNum: 1 });
-            let idx = 18;
+            const rem = total - 18;
+            const numPages = Math.max(2, 1 + Math.ceil(Math.max(0, rem) / 20));
 
-            while (idx < totalLines) {
-                const remaining = totalLines - idx;
-                if (remaining <= 18) {
-                    pages.push({
-                        type: 'last',
-                        lines: lines.slice(idx, idx + remaining),
-                        pageNum: pages.length + 1
-                    });
-                    idx += remaining;
-                } else {
-                    const take = Math.min(22, remaining - 1);
-                    pages.push({
-                        type: 'middle',
-                        lines: lines.slice(idx, idx + take),
-                        pageNum: pages.length + 1
-                    });
-                    idx += take;
-                }
+            const p1Lines = Math.min(18, Math.ceil(total / numPages));
+            let remLines = total - p1Lines;
+            const remPages = numPages - 1;
+
+            const pages = [{ type: 'first', lines: lines.slice(0, p1Lines), pageNum: 1 }];
+            let curr = p1Lines;
+
+            for (let i = 0; i < remPages; i++) {
+                const pagesLeft = remPages - i;
+                const take = Math.min(22, Math.ceil(remLines / pagesLeft));
+                const isLast = (i === remPages - 1);
+                pages.push({
+                    type: isLast ? 'last' : 'middle',
+                    lines: lines.slice(curr, curr + take),
+                    pageNum: pages.length + 1
+                });
+                curr += take;
+                remLines -= take;
             }
 
             pages.forEach(p => p.totalPages = pages.length);
@@ -839,23 +838,7 @@
                 bodyStartY = 85;
             }
 
-            ctx.strokeStyle = 'rgba(126, 156, 130, 0.38)';
-            ctx.lineWidth = 1.5;
-            const maxRuledY = (pageData.type === 'single' || pageData.type === 'last') ? 720 : 780;
-            for (let y = bodyStartY; y <= maxRuledY; y += lineHeight) {
-                ctx.beginPath();
-                ctx.moveTo(padLeft - 10, y + 4);
-                ctx.lineTo(width - padRight, y + 4);
-                ctx.stroke();
-            }
-
-            ctx.strokeStyle = 'rgba(126, 156, 130, 0.65)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(padLeft - 14, bodyStartY - 10);
-            ctx.lineTo(padLeft - 14, maxRuledY + 6);
-            ctx.stroke();
-
+            // Draw body text
             ctx.fillStyle = '#172a38';
             ctx.font = '20px "Hind Siliguri", "Kalam", sans-serif';
             let curY = bodyStartY + 26;
@@ -864,17 +847,50 @@
                 curY += lineHeight;
             }
 
-            if (pageData.type === 'single' || pageData.type === 'last') {
+            // Determine dynamic signature coordinates
+            let signY = 750;
+            let authorY = 784;
+            const isFinalPage = (pageData.type === 'single' || pageData.type === 'last');
+
+            if (isFinalPage) {
+                // Sits naturally right below text (or clamps cleanly if page is full)
+                signY = Math.min(740, curY + 24);
+                authorY = signY + 32;
+            }
+
+            // Draw ruled lines — on the final page, wrap up cleanly below the signature
+            ctx.strokeStyle = 'rgba(126, 156, 130, 0.38)';
+            ctx.lineWidth = 1.5;
+            const maxRuledY = isFinalPage ? Math.min(780, Math.max(authorY + 24, curY + 60)) : 780;
+
+            for (let y = bodyStartY; y <= maxRuledY; y += lineHeight) {
+                ctx.beginPath();
+                ctx.moveTo(padLeft - 10, y + 4);
+                ctx.lineTo(width - padRight, y + 4);
+                ctx.stroke();
+            }
+
+            // Vertical margin
+            ctx.strokeStyle = 'rgba(126, 156, 130, 0.65)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padLeft - 14, bodyStartY - 10);
+            ctx.lineTo(padLeft - 14, maxRuledY + 4);
+            ctx.stroke();
+
+            // Render signature directly underneath
+            if (isFinalPage) {
                 ctx.textAlign = 'right';
                 ctx.fillStyle = '#2d4232';
                 ctx.font = '600 20px "Hind Siliguri", sans-serif';
-                ctx.fillText('ইতি,', width - padRight, 755);
+                ctx.fillText('ইতি,', width - padRight, signY);
 
                 ctx.fillStyle = '#172a38';
                 ctx.font = '700 24px "Hind Siliguri", sans-serif';
-                ctx.fillText(authorText, width - padRight, 788);
+                ctx.fillText(authorText, width - padRight, authorY);
             }
 
+            // Bottom page counter badge
             if (pageData.totalPages > 1) {
                 ctx.textAlign = 'center';
                 ctx.fillStyle = '#7a967f';
@@ -935,16 +951,7 @@
                         body: formData
                     });
 
-                    if (res.ok) {
-                        isSuccess = true;
-                        if (isLongCaption) {
-                            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ chat_id: CHAT_ID, text: fullBlockquote, parse_mode: "HTML" })
-                            });
-                        }
-                    }
+                    if (res.ok) isSuccess = true;
                 } else {
                     const media = pageBlobs.map((_, i) => ({
                         type: 'photo',
@@ -976,18 +983,8 @@
                                 body: singleForm
                             });
                         }
-                        isSuccess = true;
-                    } else {
-                        isSuccess = true;
                     }
-
-                    if (isSuccess) {
-                        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ chat_id: CHAT_ID, text: fullBlockquote, parse_mode: "HTML" })
-                        });
-                    }
+                    isSuccess = true;
                 }
 
                 if (isSuccess) {
