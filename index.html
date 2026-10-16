@@ -69,7 +69,6 @@
             transition: transform 0.35s ease, opacity 0.3s ease;
         }
 
-        /* Straightens the card completely in preview mode so long letters look crisp and balanced */
         .chirkut-card.preview-mode {
             transform: rotate(0deg) !important;
         }
@@ -155,7 +154,6 @@
             font-weight: 400;
         }
 
-        /* Auto-expanding editable textarea on the preview sheet */
         textarea.review-fountain-ink {
             width: 100%;
             min-height: 135px;
@@ -651,6 +649,7 @@
 
         let isUnknown = false;
         let isSending = false;
+        let isDelivered = false;
 
         const letterBody = document.getElementById('letterBody');
         const senderName = document.getElementById('senderName');
@@ -663,6 +662,57 @@
 
         const reviewBodyText = document.getElementById('reviewBodyText');
         const reviewSenderInput = document.getElementById('reviewSenderInput');
+
+        // ==========================================
+        // LOCAL STORAGE AUTO-SAVE & RESTORE SYSTEM
+        // ==========================================
+        function saveDraft() {
+            try {
+                localStorage.setItem('chirkut_draft_text', letterBody.value);
+                localStorage.setItem('chirkut_draft_author', senderName.value);
+                localStorage.setItem('chirkut_draft_unknown', isUnknown ? '1' : '0');
+            } catch (e) {}
+        }
+
+        function clearDraft() {
+            try {
+                localStorage.removeItem('chirkut_draft_text');
+                localStorage.removeItem('chirkut_draft_author');
+                localStorage.removeItem('chirkut_draft_unknown');
+            } catch (e) {}
+        }
+
+        (function restoreDraft() {
+            try {
+                const savedText = localStorage.getItem('chirkut_draft_text');
+                const savedAuthor = localStorage.getItem('chirkut_draft_author');
+                const savedUnknown = localStorage.getItem('chirkut_draft_unknown');
+
+                if (savedText) {
+                    letterBody.value = savedText;
+                    charCounter.textContent = `${letterBody.value.length} / ${letterBody.maxLength}`;
+                }
+
+                if (savedUnknown === '1') {
+                    isUnknown = true;
+                    pseudoChip.classList.add('active');
+                    pseudoChip.textContent = "✓ অচেনা মানুষ";
+                    senderName.value = "অচেনা মানুষ";
+                    senderName.disabled = true;
+                    senderName.style.opacity = "0.75";
+                } else if (savedAuthor) {
+                    senderName.value = savedAuthor;
+                }
+            } catch (e) {}
+        })();
+
+        // Browser reload prompt protection if user has unsaved draft
+        window.addEventListener('beforeunload', (e) => {
+            if (!isDelivered && letterBody.value.trim().length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
 
         function toBengaliDigits(num) {
             const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -684,6 +734,7 @@
         letterBody.addEventListener('input', () => {
             charCounter.textContent = `${letterBody.value.length} / ${letterBody.maxLength}`;
             writingStatus.textContent = "";
+            saveDraft();
         });
 
         function toggleAnonymous() {
@@ -702,6 +753,7 @@
                 senderName.disabled = false;
                 senderName.style.opacity = "1";
             }
+            saveDraft();
         }
 
         senderName.addEventListener('input', () => {
@@ -711,6 +763,7 @@
                 pseudoChip.textContent = "অচেনা মানুষ";
             }
             writingStatus.textContent = "";
+            saveDraft();
         });
 
         function adjustReviewHeight() {
@@ -718,12 +771,12 @@
             reviewBodyText.style.height = Math.max(135, reviewBodyText.scrollHeight) + 'px';
         }
 
-        // Live sync when editing directly on the preview sheet
         reviewBodyText.addEventListener('input', () => {
             adjustReviewHeight();
             letterBody.value = reviewBodyText.value;
             charCounter.textContent = `${letterBody.value.length} / ${letterBody.maxLength}`;
             reviewStatus.textContent = "";
+            saveDraft();
         });
 
         reviewSenderInput.addEventListener('input', () => {
@@ -736,6 +789,7 @@
                 senderName.style.opacity = "1";
             }
             reviewStatus.textContent = "";
+            saveDraft();
         });
 
         function openReview() {
@@ -757,7 +811,6 @@
             reviewBodyText.value = letterBody.value;
             reviewSenderInput.value = finalAuthor;
 
-            // Straighten the card so tall previews look crisp and aligned
             paperCard.classList.add('preview-mode');
 
             document.getElementById('writingView').style.display = "none";
@@ -768,7 +821,6 @@
         }
 
         function backToEdit() {
-            // Restore subtle stationery tilt
             paperCard.classList.remove('preview-mode');
             document.getElementById('reviewView').style.display = "none";
             document.getElementById('writingView').style.display = "block";
@@ -805,7 +857,6 @@
             return lines;
         }
 
-        // Evenly distributes lines across pages
         function createChirkutPages(lines) {
             const total = lines.length;
 
@@ -899,7 +950,6 @@
                 authorY = signY + 32;
             }
 
-            // Ruled lines under text
             ctx.strokeStyle = 'rgba(126, 156, 130, 0.38)';
             ctx.lineWidth = 1.5;
             const maxRuledY = isFinalPage ? Math.min(780, Math.max(authorY + 24, endTextY + 50)) : 780;
@@ -918,7 +968,6 @@
             ctx.lineTo(padLeft - 14, maxRuledY + 4);
             ctx.stroke();
 
-            // Text on top of ruled lines
             ctx.fillStyle = '#172a38';
             ctx.font = '20px "Hind Siliguri", "Kalam", sans-serif';
             let curY = bodyStartY + 26;
@@ -948,7 +997,6 @@
             return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         }
 
-        // Splits text into chunks safely under Telegram's 4,096-character limit so text never fails
         async function sendTelegramTextChunks(text, dateText, author) {
             const maxChunkLen = 3400;
             const paragraphs = text.split('\n');
@@ -1010,7 +1058,6 @@
         async function sendChirkut() {
             if (isSending) return;
 
-            // Read directly from the preview sheet in case they edited words there
             const text = reviewBodyText.value.trim();
             const author = reviewSenderInput.value.trim() || "অচেনা মানুষ";
             const dateText = document.getElementById('letterDate').textContent;
@@ -1041,7 +1088,6 @@
 
                 let isSuccess = false;
 
-                // 1. Send Chirkut Image / Swipable Album
                 if (pageBlobs.length === 1) {
                     const formData = new FormData();
                     formData.append('chat_id', CHAT_ID);
@@ -1075,10 +1121,7 @@
                         body: formData
                     });
 
-                    if (res.ok) {
-                        isSuccess = true;
-                    } else {
-                        // Fallback: send individual photos
+                    if (!res.ok) {
                         for (let i = 0; i < pageBlobs.length; i++) {
                             const singleForm = new FormData();
                             singleForm.append('chat_id', CHAT_ID);
@@ -1089,13 +1132,16 @@
                                 body: singleForm
                             });
                         }
-                        isSuccess = true;
                     }
+                    isSuccess = true;
                 }
 
-                // 2. Deliver the full readable text immediately after the image/album
                 if (isSuccess) {
                     await sendTelegramTextChunks(text, dateText, author);
+
+                    // Successfully delivered -> safe to clear saved draft
+                    clearDraft();
+                    isDelivered = true;
 
                     paperCard.style.display = "none";
                     foldingStage.style.display = "block";
@@ -1123,6 +1169,8 @@
         }
 
         function resetLetter() {
+            clearDraft();
+            isDelivered = false;
             letterBody.value = "";
             senderName.value = "";
             reviewBodyText.value = "";
