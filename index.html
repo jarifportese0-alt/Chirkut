@@ -66,7 +66,12 @@
                 inset 10px 0 20px rgba(0, 0, 0, 0.025);
             border-left: 9px solid #7e9c82;
             transform: rotate(-0.4deg);
-            transition: opacity 0.3s ease;
+            transition: transform 0.35s ease, opacity 0.3s ease;
+        }
+
+        /* Straightens the card completely in preview mode so long letters look crisp and balanced */
+        .chirkut-card.preview-mode {
+            transform: rotate(0deg) !important;
         }
 
         .chirkut-card::before {
@@ -576,7 +581,7 @@
                 </div>
             </div>
 
-            <!-- STEP 2: Review View (Direct in-place editing allowed) -->
+            <!-- STEP 2: Review View (Direct in-place editing allowed, straight card) -->
             <div id="reviewView" style="display: none;">
                 <div class="letter-header">
                     <div class="letter-date" id="reviewDate">তারিখ: ১২ অক্টোবর, ২০২৬</div>
@@ -752,6 +757,9 @@
             reviewBodyText.value = letterBody.value;
             reviewSenderInput.value = finalAuthor;
 
+            // Straighten the card so tall previews look crisp and aligned
+            paperCard.classList.add('preview-mode');
+
             document.getElementById('writingView').style.display = "none";
             document.getElementById('reviewView').style.display = "block";
             reviewStatus.textContent = "";
@@ -760,6 +768,8 @@
         }
 
         function backToEdit() {
+            // Restore subtle stationery tilt
+            paperCard.classList.remove('preview-mode');
             document.getElementById('reviewView').style.display = "none";
             document.getElementById('writingView').style.display = "block";
         }
@@ -1065,7 +1075,10 @@
                         body: formData
                     });
 
-                    if (!res.ok) {
+                    if (res.ok) {
+                        isSuccess = true;
+                    } else {
+                        // Fallback: send individual photos
                         for (let i = 0; i < pageBlobs.length; i++) {
                             const singleForm = new FormData();
                             singleForm.append('chat_id', CHAT_ID);
@@ -1076,8 +1089,8 @@
                                 body: singleForm
                             });
                         }
+                        isSuccess = true;
                     }
-                    isSuccess = true;
                 }
 
                 // 2. Deliver the full readable text immediately after the image/album
@@ -1091,6 +1104,7 @@
                         foldingStage.style.display = "none";
                         document.getElementById('reviewView').style.display = "none";
                         document.getElementById('deliveredView').style.display = "block";
+                        paperCard.classList.remove('preview-mode');
                         paperCard.style.display = "block";
                         triggerConfetti();
                     }, 1650);
@@ -1122,6 +1136,7 @@
             writingStatus.textContent = "";
             reviewStatus.textContent = "";
 
+            paperCard.classList.remove('preview-mode');
             document.getElementById('deliveredView').style.display = "none";
             document.getElementById('writingView').style.display = "block";
             isSending = false;
